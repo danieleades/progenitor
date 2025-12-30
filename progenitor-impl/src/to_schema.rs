@@ -575,10 +575,10 @@ impl Convert<schemars::schema::Schema> for openapiv3::Schema {
                                 .then_some(schemars::schema::InstanceType::Array),
                             so.number
                                 .is_some()
-                                .then_some(schemars::schema::InstanceType::Array),
+                                .then_some(schemars::schema::InstanceType::Number),
                             so.string
                                 .is_some()
-                                .then_some(schemars::schema::InstanceType::Array),
+                                .then_some(schemars::schema::InstanceType::String),
                             nullable.then_some(schemars::schema::InstanceType::Null),
                         ]
                         .into_iter()
@@ -895,5 +895,60 @@ mod tests {
 
         let conv_schema = oa_schema.convert();
         assert_eq!(conv_schema, js_schema);
+    }
+
+    #[test]
+    fn test_nullable_number_no_type() {
+        // This test exposes the bug on lines 576-581
+        let schema_value = json!({
+            "minimum": 10.0,
+            "nullable": true
+        });
+
+        let oa_schema = serde_json::from_value::<openapiv3::Schema>(schema_value).unwrap();
+        let conv_schema = oa_schema.convert();
+
+        let obj = conv_schema.into_object();
+
+        // The bug would cause instance_type to be [Array, Null] instead of [Number, Null]
+        if let Some(schemars::schema::SingleOrVec::Vec(types)) = &obj.instance_type {
+            assert!(
+                types.contains(&schemars::schema::InstanceType::Number),
+                "Expected Number type, got: {:?}",
+                types
+            );
+            assert!(
+                !types.contains(&schemars::schema::InstanceType::Array),
+                "Should not contain Array type, got: {:?}",
+                types
+            );
+        }
+    }
+
+    #[test]
+    fn test_nullable_string_no_type() {
+        let schema_value = json!({
+            "pattern": "^[a-z]+$",
+            "nullable": true
+        });
+
+        let oa_schema = serde_json::from_value::<openapiv3::Schema>(schema_value).unwrap();
+        let conv_schema = oa_schema.convert();
+
+        let obj = conv_schema.into_object();
+
+        // The bug would cause instance_type to be [Array, Null] instead of [String, Null]
+        if let Some(schemars::schema::SingleOrVec::Vec(types)) = &obj.instance_type {
+            assert!(
+                types.contains(&schemars::schema::InstanceType::String),
+                "Expected String type, got: {:?}",
+                types
+            );
+            assert!(
+                !types.contains(&schemars::schema::InstanceType::Array),
+                "Should not contain Array type, got: {:?}",
+                types
+            );
+        }
     }
 }
