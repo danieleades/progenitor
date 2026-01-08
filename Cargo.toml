@@ -66,3 +66,6 @@ uuid = { version = "1.19.0", features = ["serde", "v4"] }
 #serde_tokenstream = { path = "../serde_tokenstream" }
 #typify = { path = "../typify/typify" }
 #rustfmt-wrapper = { path = "../rustfmt-wrapper" }
+
+[patch.crates-io]
+typify = { git = "https://github.com/danieleades/typify", branch = "refactor2"}
